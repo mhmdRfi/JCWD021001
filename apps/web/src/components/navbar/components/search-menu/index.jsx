@@ -1,7 +1,7 @@
-import { InputGroup, Input, InputRightElement, Icon, useDisclosure } from '@chakra-ui/react'
+import { InputGroup, Input, InputRightElement, Icon } from '@chakra-ui/react'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 export const SearchMenu = () => {
   // Input filter by name
   const [filter, setFilter] = useState('')
@@ -26,7 +26,6 @@ export const SearchMenu = () => {
         w={{ md: '15em', lg: '25em' }}
         variant={'outline'}
         border={'1px solid lightgray'}
-        focusBorderColor="lightgray"
         placeholder={'Search a product here'}
         onChange={(e) => {
           setInputFilter(e?.target?.value)
