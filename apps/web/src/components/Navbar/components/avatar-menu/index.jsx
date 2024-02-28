@@ -7,7 +7,7 @@ import {
   ArrowRightOnRectangleIcon,
   BuildingLibraryIcon
 } from '@heroicons/react/24/outline'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { logoutSuccess } from '../../../../redux/reducer/authReducer'
 
 function AvatarNavbar() {
@@ -41,7 +41,7 @@ function AvatarNavbar() {
           {(isAdmin === 1 || isAdmin === 2) && (
             <MenuItem
               as="a"
-              href="/dashboard"
+              href={isAdmin === 1 ? '/dashboard/admin-list' : '/dashboard/product-list?pa=1'}
               _hover={{ bg: 'none', color: '#CD0244' }}
               _active={{ bg: 'none', color: '#CD0244' }}
               gap={'12px'}

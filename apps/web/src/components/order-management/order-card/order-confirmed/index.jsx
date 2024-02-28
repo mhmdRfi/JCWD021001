@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Text, Button, ButtonGroup, Icon, Input, Collapse } from '@chakra-ui/react'
+import React from 'react'
+import { Box, Text, Collapse, Image } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
 import toRupiah from '@develoka/angka-rupiah-js'
+import { IMAGE_API_ROUTE } from '../../../../services/route'
 
 const OrderConfirmed = ({
   orderConfirmedOrders,
   expandedProducts,
   handleToggleProducts,
-  handleAcceptButton,
-  handleRejectButton,
+  formatDate,
 }) => {
   const navigate = useNavigate()
   return (
@@ -35,7 +35,7 @@ const OrderConfirmed = ({
                 flexDirection={{ base: 'column', xl: 'row' }}
               >
                 <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
-                  {items?.orderDate}
+                  {formatDate(items?.orderDate)}
                 </Text>
                 <Box display={'flex'} alignItems={'center'} gap={'12px'}>
                   <Box bgColor={'#E8E7E7'} minW={'8px'} h={'8px'} borderRadius={'50%'} />
@@ -45,7 +45,11 @@ const OrderConfirmed = ({
                     fontWeight={'600'}
                     fontSize={'14px'}
                     cursor={'pointer'}
-                    onClick={() => navigate('/order-management/details')}
+                    onClick={() =>
+                      navigate('/dashboard/order-management/details', {
+                        state: { orderId: items?.id },
+                      })
+                    }
                   >
                     No. Order {items?.orderNumber}
                   </Text>
@@ -70,15 +74,27 @@ const OrderConfirmed = ({
                     w={'112px'}
                     h={'112px'}
                     cursor={'pointer'}
-                    onClick={() => navigate('/order-management/details')}
-                  ></Box>
+                    onClick={() =>
+                      navigate('/dashboard/order-management/details', {
+                        state: { orderId: items?.id },
+                      })
+                    }
+                  >
+                    <Image
+                      src={`${IMAGE_API_ROUTE}/productImages/${items?.OrderProducts[0]?.stocks?.product?.picture[0]?.imageUrl}`}
+                    />
+                  </Box>
                   <Box display={'flex'} flexDirection={'column'} gap={'6px'}>
                     <Text
                       fontFamily={'body'}
                       fontWeight={'600'}
                       fontSize={'14px'}
                       cursor={'pointer'}
-                      onClick={() => navigate('/order-management/details')}
+                      onClick={() =>
+                        navigate('/dashboard/order-management/details', {
+                          state: { orderId: items?.id },
+                        })
+                      }
                     >
                       {items?.OrderProducts[0]?.stocks?.product?.name}
                     </Text>
@@ -124,7 +140,11 @@ const OrderConfirmed = ({
                   <Box display={'flex'} flexDirection={'column'} gap={'16px'}>
                     {items?.OrderProducts.slice(1).map((product, index) => (
                       <Box display={'flex'} gap={'16px'} key={index}>
-                        <Box bgColor={'brand.grey100'} w={'112px'} h={'112px'}></Box>
+                        <Box bgColor={'brand.grey100'} w={'112px'} h={'112px'}>
+                          <Image
+                            src={`${IMAGE_API_ROUTE}/productImages/${product?.stocks?.product?.picture[0]?.imageUrl}`}
+                          />
+                        </Box>
                         <Box display={'flex'} flexDirection={'column'} gap={'6px'}>
                           <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
                             {product?.stocks?.product?.name}

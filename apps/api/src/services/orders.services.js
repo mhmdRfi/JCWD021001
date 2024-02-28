@@ -9,6 +9,7 @@ import {
   productToStockIdQuery,
   updateOrderQuery,
   findOrderStatusQuery,
+  getOrderDetailQuery,
   getAllOrderByCategoryQuery, // by putu
   getAllOrderByProductQuery, // by putu
   getAllOrderQuery, // by putu
@@ -16,6 +17,7 @@ import {
 } from '../queries/orders.queries'
 import schedule from 'node-schedule'
 import moment from 'moment'
+import { sum } from 'lodash'
 
 const calcTotalPrice = (products) => {
   return products.reduce((total, product) => {
@@ -61,7 +63,8 @@ export const updateOrderStatus = async () => {
     const orders = await findOrderStatusQuery(orderStatusId)
     const now = moment().tz('Asia/Jakarta') // Ambil waktu saat ini dengan zona waktu yang sesuai
 
-    for (const order of orders) { // Menggunakan for...of loop agar dapat menunggu setiap operasi async selesai
+    for (const order of orders) {
+      // Menggunakan for...of loop agar dapat menunggu setiap operasi async selesai
       const expectedDeliveryDate = moment(order?.expectedDeliveryDate).tz('Asia/Jakarta')
       const differenceInDays = now.diff(expectedDeliveryDate, 'days')
       // const differenceInMinutes = now.diff(expectedDeliveryDate, 'minutes')
@@ -76,7 +79,36 @@ export const updateOrderStatus = async () => {
   }
 }
 
-schedule.scheduleJob('00 00 * * *', updateOrderStatus)
+export const updateOrderStatusWaiting = async () => {
+  try {
+    const orderStatusId = 1
+    const orders = await findOrderStatusQuery(orderStatusId)
+    const now = moment().tz('Asia/Jakarta') // Ambil waktu saat ini dengan zona waktu yang sesuai
+
+    for (const order of orders) {
+      // Menggunakan for...of loop agar dapat menunggu setiap operasi async selesai
+      const expectedWaitingPaymentTime = moment(
+        order?.Payments?.expectedWaitingPaymentTime,
+        'HH:mm:ss',
+      ).tz('Asia/Jakarta')
+      const differenceInHours = now.diff(expectedWaitingPaymentTime, 'hours')
+
+      // const differenceInMinutes = now.diff(expectedDeliveryDate, 'minutes')
+
+      if (differenceInHours >= 2) {
+        const newOrderStatusId = 6
+        await updateOrderQuery(order.id, newOrderStatusId)
+      }
+    }
+  } catch (err) {
+    throw new Error('Failed to update order status: ' + err.message)
+  }
+}
+
+schedule.scheduleJob('00 00 * * *', () => {
+  updateOrderStatus()
+  updateOrderStatusWaiting()
+})
 
 export const updateOrderService = async (orderId, orderStatusId) => {
   try {
@@ -98,8 +130,8 @@ export const getOrderService = async (
   pageSize,
 ) => {
   try {
-    const check = await findOrderIdQuery({ userId })
-    if (!check) throw new Error('Data doesnt exist')
+    // const check = await findOrderIdQuery({ userId })
+    // if (!check) throw new Error('Data doesnt exist')
     const res = await getOrderQuery({
       userId,
       orderNumber,
@@ -115,6 +147,7 @@ export const getOrderService = async (
 }
 
 export const getOrderManagementService = async (
+  adminWarehouse,
   orderNumber,
   orderDate,
   warehouseId,
@@ -126,6 +159,7 @@ export const getOrderManagementService = async (
     //   const check = await findOrderIdQuery({ userId })
     //   if (!check) throw new Error('Data doesnt exist')
     const res = await getOrderManagementQuery({
+      adminWarehouse,
       orderNumber,
       orderDate,
       warehouseId,
@@ -139,10 +173,19 @@ export const getOrderManagementService = async (
   }
 }
 
+export const getOrderDetailService = async (orderId) => {
+  try {
+    const res = await getOrderDetailQuery(orderId)
+    return res
+  } catch (err) {
+    throw err
+  }
+}
+
 export const getWarehouseService = async () => {
   try {
-    const check = await findWarehouseQuery()
-    if (!check) throw new Error('Data doesnt exist')
+    // const check = await findWarehouseQuery()
+    // if (!check) throw new Error('Data doesnt exist')
     const res = await getWarehouseQuery()
     return res
   } catch (err) {
@@ -184,14 +227,18 @@ export const calculationCheckStockService = async (orderId) => {
 
     for (const orderProduct of orders.OrderProducts) {
       const { quantity, stocks } = orderProduct
-      const { productId } = stocks
-      console.log('stocks', stocks.id)
+      const { productId, colourId, sizeId } = stocks
+      // console.log('stocks', stocks.id)
 
       const selectedWarehouse = warehouse.find((wh) => wh.id === orders.warehouseId)
 
+      // console.log('ware', selectedWarehouse)
+
       if (selectedWarehouse) {
-        const selectedStock = selectedWarehouse.stock.find((stock) => stock.productId === productId)
-        console.log('stock', selectedStock)
+        const selectedStock = selectedWarehouse.stock.find(
+          (stock) =>
+            stock.productId === productId && stock.colourId === colourId && stock.sizeId === sizeId,
+        )
 
         if (selectedStock) {
           const availableQuantity = selectedStock.qty
@@ -215,6 +262,9 @@ export const calculationCheckStockService = async (orderId) => {
 
             let nearestWarehouse = selectedWarehouse
             let nearestWarehouseQuantity = availableQuantity
+            let stockIdNearestWarehouse = stocks.id
+            let check = true
+            let checkQuantity = []
 
             while (nearestWarehouseQuantity < quantity) {
               // Find the next nearest warehouse
@@ -234,43 +284,61 @@ export const calculationCheckStockService = async (orderId) => {
 
               // Check stock in the next nearest warehouse
               const nextNearestWarehouseStock = nextNearestWarehouse.warehouse.stock.find(
-                (stock) => stock.productId === productId,
+                (stock) =>
+                  stock.productId === productId &&
+                  stock.colourId === colourId &&
+                  stock.sizeId === sizeId,
               )
 
-              if (nextNearestWarehouseStock) {
+              if (nextNearestWarehouseStock && checkQuantity.length !== warehouse.length - 1) {
                 nearestWarehouse = nextNearestWarehouse.warehouse
                 nearestWarehouseQuantity =
                   nextNearestWarehouseStock.qty > nearestWarehouseQuantity
                     ? nextNearestWarehouseStock.qty
                     : nearestWarehouseQuantity
+                stockIdNearestWarehouse = nextNearestWarehouseStock.id
+                checkQuantity.push(nextNearestWarehouseStock.qty)
               } else {
+                check = false
                 break
               }
             }
 
             const needSelectedWarehouseQuantity = quantity - availableQuantity
 
-            // Update checkStockResults based on the condition
-            checkStockResults.push({
-              orderId: orders.id,
-              stockId: stocks.id,
-              productId,
-              quantity,
-              status: availableQuantity >= quantity ? 'Available Stock' : 'Insufficient Stock',
-              selectedWarehouse: {
-                id: selectedWarehouse.id,
-                name: selectedWarehouse.name,
-              },
-              selectedWarehouseQuantity: availableQuantity,
-              nearestWarehouse: {
-                id: nearestWarehouse.id,
-                name: nearestWarehouse.name,
-              },
-              nearestWarehouseStatus:
-                nearestWarehouseQuantity >= quantity ? 'Available Stock' : 'Insufficient Stock',
-              nearestWarehouseQuantity,
-              needSelectedWarehouseQuantity,
-            })
+            if (check) {
+              // Update checkStockResults based on the condition
+              checkStockResults.push({
+                orderId: orders.id,
+                stockId: stocks.id,
+                productId,
+                quantity,
+                status: availableQuantity >= quantity ? 'Available Stock' : 'Insufficient Stock',
+                selectedWarehouse: {
+                  id: selectedWarehouse.id,
+                  name: selectedWarehouse.name,
+                },
+                selectedWarehouseQuantity: availableQuantity,
+                nearestWarehouse: {
+                  id: nearestWarehouse.id,
+                  name: nearestWarehouse.name,
+                },
+                nearestWarehouseStatus:
+                  nearestWarehouseQuantity >= quantity ? 'Available Stock' : 'Insufficient Stock',
+                stockIdNearestWarehouse,
+                nearestWarehouseQuantity,
+                needSelectedWarehouseQuantity,
+              })
+            } else {
+              checkStockResults.push({
+                orderId: orders.id,
+                stockId: stocks.id,
+                productId,
+                quantity,
+                status: 'Empty',
+                message: 'The entire warehouse for this productId quantity is empty',
+              })
+            }
           }
         } else {
           checkStockResults.push({
@@ -293,8 +361,8 @@ export const calculationCheckStockService = async (orderId) => {
     }
 
     return {
-      orders,
-      warehouse,
+      // orders,
+      // warehouse,
       checkStockResults,
     }
   } catch (err) {

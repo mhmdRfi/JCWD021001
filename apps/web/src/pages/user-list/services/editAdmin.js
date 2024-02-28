@@ -3,7 +3,6 @@ import toast from 'react-hot-toast'
 
 export const editAdmin = async (id, username, email, password, roleId) => {
   const token = localStorage.getItem('token')
-  console.log('ini token', token)
   try {
     await axios.patch(
       `${import.meta.env.VITE_API_URL}user/${id}`,
@@ -20,6 +19,7 @@ export const editAdmin = async (id, username, email, password, roleId) => {
         },
       },
     )
+    toast.success('admin updated successfully')
   } catch (err) {
     const errorMessage =
       err.response && err.response.data && err.response.data.message

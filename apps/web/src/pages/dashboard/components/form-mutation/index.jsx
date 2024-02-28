@@ -26,7 +26,7 @@ import { getStock } from '../stock-management/services/readStock'
 import { useLocation } from 'react-router-dom'
 import { createMutation } from '../stock-mutation/services/createMutation'
 import { getWarehouses } from './services/readWarehouse'
-import { SearchInput } from '../create-stock/component/search-input'
+import { SearchInput } from './component'
 
 export const FormMutation = (props) => {
   // LOCATION
@@ -35,12 +35,13 @@ export const FormMutation = (props) => {
 
   // QUERY PARAMS
   const pageValue = queryParams.get('pa')
+  const warehouseValue = queryParams.get('wa')
 
   // PATHNAME
   const pathName = location.pathname
 
   //   WAREHOUSE ID
-  const [warehouseId, setWarehouseId] = useState(props?.user?.warehouseId)
+  const [warehouseId, setWarehouseId] = useState(warehouseValue || props?.user?.warehouseId)
 
   //   CONST RECIPIENT WAREHOUSE ID
   const [recipientWarehouseId, setRecipientWarehouseId] = useState(null)
@@ -52,7 +53,7 @@ export const FormMutation = (props) => {
   const [warehouses, setWarehouses] = useState([])
 
   useEffect(() => {
-    setWarehouseId(props?.user?.warehouseId)
+    setWarehouseId(warehouseValue || props?.user?.warehouseId)
     getWarehouses(warehouseId).then((data) => {
       setWarehouses(data)
     })
@@ -75,7 +76,7 @@ export const FormMutation = (props) => {
         stockId,
       )
       toast({
-        title: `${res?.message}`,
+        title: `${res?.data?.message}`,
         status: 'success',
         placement: 'bottom',
       })
@@ -106,17 +107,28 @@ export const FormMutation = (props) => {
   })
 
   // FORMIK
+  const [stockQty, setStockQty] = useState([])
+
   const formik = useFormik({
     initialValues: {
       recipientWarehouseAddress: '',
       productName: '',
       qty: '',
     },
+
     validateOnBlur: true,
     validationSchema: yup.object({
       recipientWarehouseAddress: yup.string().required('Please select the warehouse'),
       productName: yup.string().required('Please select the product'),
-      qty: yup.number().required('Input quantity'),
+      qty: yup
+        .number()
+        .required('Input quantity')
+        .test('maxValue', 'Value must be less than or equal to recipient stocks', (value) => {
+          return value <= stockQty
+        })
+        .test('notZero', 'Qty cannot be zero', (value) => {
+          return value !== 0
+        }),
     }),
     onSubmit: async (values) => {
       handleCreateMutation(
@@ -132,7 +144,6 @@ export const FormMutation = (props) => {
   const [productNameFilter, setProductNameFilter] = useState('')
   //   STOCKS
   const [stocks, setStocks] = useState([])
-
   const handleKeyDown = (event) => {
     // Prevent form submission on Enter key press
     if (event.key === 'Enter') {
@@ -142,7 +153,7 @@ export const FormMutation = (props) => {
   useEffect(() => {
     getStock(recipientWarehouseId, productNameFilter, pageValue, 10).then((data) => setStocks(data))
   }, [pageValue, productNameFilter, recipientWarehouseId, setRecipientWarehouseId])
-
+  console.log('stocks', stocks)
   const renderedTableBody = stocks?.rows?.map((stock, index) => {
     return (
       <Tr key={index} cursor={'pointer'} p={'.875em'} bgColor={'#FAFAFA'}>
@@ -166,6 +177,7 @@ export const FormMutation = (props) => {
                 ...formData,
                 stockId: stock?.id,
               }))
+              setStockQty(stock?.qty)
             }}
           >
             Choose
@@ -179,7 +191,12 @@ export const FormMutation = (props) => {
     <Box p={'1em'} bgColor={'white'} minH={'100vh'}>
       <Flex dir={'column'} justifyContent={'space-between'}>
         <VStack align={'stretch'} w={'100%'}>
-          <Heading as={'h1'} fontSize={'1.5em'}>
+          <Heading
+            as={'h1'}
+            fontSize={{ base: '1em', md: '1.5em' }}
+            fontWeight={'bold'}
+            justifyContent={'space-between'}
+          >
             Form Mutation
           </Heading>
           <form onSubmit={formik.handleSubmit}>
@@ -189,6 +206,7 @@ export const FormMutation = (props) => {
                   Warehouse Destination
                 </FormLabel>
                 <Select
+                  border={'1px solid lightgray'}
                   placeholder={'Select warehouse'}
                   id={'recipientWarehouseAddress'}
                   name={'recipientWarehouseAddress'}
@@ -202,9 +220,6 @@ export const FormMutation = (props) => {
                     }))
                     formik.setFieldValue('recipientWarehouseAddress', e.target.value)
                   }}
-                  borderColor={'transparent'}
-                  focusBorderColor={'transparent'}
-                  bgColor={'grey.50'}
                 >
                   {warehouseOptions}
                 </Select>
@@ -225,15 +240,14 @@ export const FormMutation = (props) => {
                 </Flex>
                 <Input
                   mt={'1em'}
+                  border={'1px solid lightgray'}
+                  focusBorderColor={'lightgray'}
                   placeholder={'Select product'}
                   id={'productName'}
                   name={'productName'}
                   type={'text'}
                   value={formik.values.productName}
                   onChange={formik.handleChange}
-                  borderColor={'transparent'}
-                  focusBorderColor={'transparent'}
-                  bgColor={'grey.50'}
                   onKeyDown={handleKeyDown}
                   isReadOnly
                 />
@@ -290,6 +304,11 @@ export const FormMutation = (props) => {
                 </FormLabel>
                 <Input
                   placeholder={'Input quantity'}
+                  border={'2px solid lightgray'}
+                  focusBorderColor="lightgray !important"
+                  focusShadow="none !important"
+                  _hover={{ borderColor: 'lightgray !important', boxShadow: 'none !important' }}
+                  _focus={{ borderColor: 'lightgray !important', boxShadow: 'none !important' }}
                   w={'10em'}
                   id={'qty'}
                   name={'qty'}
@@ -303,9 +322,6 @@ export const FormMutation = (props) => {
                       qty: e.target.value,
                     }))
                   }}
-                  borderColor={'transparent'}
-                  focusBorderColor={'transparent'}
-                  bgColor={'grey.50'}
                 />
                 {formik.errors.qty && <Text color="red">{formik.errors.qty}</Text>}
               </FormControl>

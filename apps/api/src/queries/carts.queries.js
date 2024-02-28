@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize'
+import { Model, Sequelize } from 'sequelize'
 import CartProducts from '../models/cartProducts.model'
 import Carts from '../models/carts.model'
 import Product from '../models/product.model'
@@ -6,18 +6,32 @@ import User from '../models/user.model'
 import Stock from '../models/stock.model'
 import Colour from '../models/colour.model'
 import Size from '../models/size.model'
+import ProductImage from '../models/productImage.model'
 
-export const findCartStockQuery = async (productId) => {
+export const findCartStockQuery = async (userId, productId, colourId, sizeId) => {
   try {
-    const res = await CartProducts.findOne({
-      include: [
-        { model: Product, as: 'product' },
-        { model: Colour, as: 'colour' },
-        { model: Size, as: 'size' },
-      ],
-      where: { productId: productId },
+    // console.log('ddd', userId, process);
+    const cart = await Carts.findOne({
+      include: [{ model: CartProducts }],
+      where: { userId: userId },
     })
-    return res
+
+    if (cart) {
+      const cartProduct = cart.CartProducts.find(
+        (cartProduct) =>
+          cartProduct.productId == productId &&
+          cartProduct.colourId == colourId &&
+          cartProduct.sizeId == sizeId,
+      )
+
+      if (cartProduct) {
+        return cartProduct // If the product already exists in the cart, return it
+      } else {
+        return null // If the product does not exist in the cart, return null
+      }
+    } else {
+      return null // If the cart does not exist, return null
+    }
   } catch (err) {
     throw err
   }
@@ -162,7 +176,7 @@ export const getCartQuery = async (userId, stockIds) => {
           include: [
             {
               model: Product,
-              as: 'product',
+              as: 'product', include: [{model: ProductImage, as: 'picture'}]
             },
             {
               model: Colour,

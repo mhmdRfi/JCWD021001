@@ -13,7 +13,6 @@ import {
 
 import { useEffect, useState } from 'react'
 import { useFormik } from 'formik'
-import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { createWarehouse } from '../../../services/createWarehouse'
 import { getCity, getProvinceWarehouse } from '../../../services/getWarehouseList'
@@ -28,10 +27,12 @@ function FormCreateWarehouse({ address, lat, lng }) {
 
   useEffect(() => {
     if (address && address.city) {
-      setSelectedProvince(address.city.provinceId)
-      setSelectedCity(address.city.id)
+      setSelectedProvince(address?.city?.provinceId)
+      setSelectedCity(address?.city?.id)
     }
+  }, [address])
 
+  useEffect(() => {
     const fetchProvinceData = async () => {
       try {
         const data = await getProvinceWarehouse()
@@ -41,21 +42,24 @@ function FormCreateWarehouse({ address, lat, lng }) {
       }
     }
     fetchProvinceData()
+  }, [])
 
-    const fetchCityData = async () => {
-      if (address?.city?.provinceId) {
-        try {
-          const cityData = await getCity(address.city.provinceId)
-          setCityList(cityData)
-        } catch (error) {
-          console.error('Error fetching city data:', error)
+    useEffect(() => {
+      const fetchCityData = async () => {
+        const provinceId = selectedProvince || address?.city?.provinceId
+  
+        if (provinceId) {
+          try {
+            const cityData = await getCity(provinceId)
+            setCityList(cityData)
+          } catch (error) {
+            console.error('Error fetching city data:', error)
+          }
         }
       }
-    }
-    fetchCityData()
-  }, [address])
+      fetchCityData()
+    }, [selectedProvince, address])
 
-  console.log('ini lat form', lat, 'ini lng form', lng)
   const formik = useFormik({
     initialValues: {
       location: '',
@@ -66,7 +70,6 @@ function FormCreateWarehouse({ address, lat, lng }) {
     validationSchema: warehouseSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        console.log('Formik Submission Values:', values)
         await createWarehouse(
           values.location,
           values.cityId,
@@ -94,10 +97,10 @@ function FormCreateWarehouse({ address, lat, lng }) {
     if (address) {
       formik.setFieldValue(
         'location',
-        `${address.address.road}, ${address.address.village}, ${address.address.municipality}`,
+        `${address?.address?.road}, ${address?.address?.village}, ${address?.address?.municipality}`,
       )
-      formik.setFieldValue('postalCode', `${address.address.postcode}`)
-      formik.setFieldValue('cityId', `${address.city.id}`)
+      formik.setFieldValue('postalCode', `${address?.address?.postcode}`)
+      formik.setFieldValue('cityId', `${address?.city?.id}`)
     }
   }, [address, formik.setFieldValue])
 

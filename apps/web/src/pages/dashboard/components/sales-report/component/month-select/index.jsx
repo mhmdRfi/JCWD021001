@@ -19,6 +19,9 @@ export const MonthSelect = (props) => {
   return (
     <VStack spacing={4}>
       <Select
+        bg={'white'}
+        border={'1px solid lightgray'}
+        focusBorderColor={'lightgray'}
         placeholder="Select a month"
         onChange={(e) => {
           props?.setMonth(e.target.value)

@@ -16,18 +16,22 @@ export const SearchInput = (props) => {
   const handleNavigate = () => {
     if (props?.pageValue) {
       navigate('/dashboard/product-list?pa=1')
+      props?.changeBoxToggle(props?.pageValue)
     }
   }
   return (
     <InputGroup>
       <Input
         id={'exclude'}
-        w={'20em'}
+        w={{ base: '9em', lg: '20em' }}
         variant={'outline'}
+        bg={'white'}
+        border={'1px solid lightgray'}
         focusBorderColor={'lightgray'}
         placeholder={'Search a product here'}
         onChange={(e) => {
           setFilter(e?.target?.value)
+          props?.changeBoxToggle(1)
           props?.setProductNameFilter(e.target.value)
           handleNavigate()
         }}

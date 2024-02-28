@@ -17,7 +17,7 @@ import { getUnasignedAdmin } from '../../services/getWarehouseList'
 import { assignAdminWarehouse } from '../../services/editWarehouse'
 import { CheckIcon } from '@chakra-ui/icons'
 
-function AssignAdmin({ warehouseId }) {
+function AssignAdmin({ warehouseId, onAdminAssigned }) {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [unassignedAdmin, setUnassignedAdmin] = useState([])
   const [selectedAdmins, setSelectedAdmins] = useState([])
@@ -42,6 +42,7 @@ function AssignAdmin({ warehouseId }) {
   const handleAssignAdmins = async () => {
     if (selectedAdmins.length > 0) {
       await assignAdminWarehouse(selectedAdmins, warehouseId)
+      onAdminAssigned();
       setSelectedAdmins([])
       onClose()
       fetchAdmin()
@@ -61,8 +62,8 @@ function AssignAdmin({ warehouseId }) {
         fontWeight={'700'}
         padding={'4px 16px'}
         w={'72px'}
-        _hover={'none'}
-        _active={'none'}
+        _hover={''}
+        _active={''}
       >
         Assign Admin
       </Text>
@@ -128,7 +129,7 @@ function AssignAdmin({ warehouseId }) {
               width={'100px'}
               bgColor={'brand.lightred'}
               color={'white'}
-              _hover={'none'}
+              _hover={''}
               _active={{ opacity: '70%' }}
             >
               Save

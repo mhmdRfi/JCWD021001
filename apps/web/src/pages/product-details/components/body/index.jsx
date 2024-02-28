@@ -5,12 +5,12 @@ import { Carousel } from '../carousel'
 import axios from 'axios'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { createCart } from '../../../cart/services/createCart' // edit by andri
-import { useToast } from '@chakra-ui/react' // edit by andri
+import toast from 'react-hot-toast' // edit by andri
 import { useCart } from '../../../../components/cart-table/service/cartContext' // edit by andri
 import { ColourBox } from '../colour-box'
 import { SizeBox } from '../size-box'
-
-
+import { useSelector } from 'react-redux'
+import { API_ROUTE } from '../../../../services/route'
 
 export const Body = (props) => {
   // Location
@@ -43,12 +43,13 @@ export const Body = (props) => {
 
   // Get stock
   const [stock, setStock] = useState(null)
+  const [qty, setQty] = useState(1)
 
   const getStock = async (productId, sizeId, colourId, setStock) => {
     try {
       const token = localStorage.getItem('token')
       const res = await axios.get(
-        `http://localhost:8000/api/stock/stock/qty?productId=${productId}&sizeId=${sizeId}&colourId=${colourId}`,
+        `${API_ROUTE}stock/stock/qty?productId=${productId}&sizeId=${sizeId}&colourId=${colourId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -69,54 +70,54 @@ export const Body = (props) => {
   const shouldDisable = !stock ? true : false
 
   // edit by andri
+  const user = useSelector((state) => state.AuthReducer.user)
   const { cartData, fetchCartCount } = useCart()
-  const toast = useToast()
   const handleAddToCart = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      toast.error('Please login first')
+      return
+    }
+    if (user?.roleId == 1) {
+      toast.error('Super Admin not add to cart')
+      return
+    }
+    if (user?.roleId == 2) {
+      toast.error('Admin not add to cart')
+      return
+    }
     const newItem = {
-      userId: 1,
+      userId: user?.id,
       productId: props?.product?.id,
       colourId: colourValue,
       sizeId: sizeValue,
       price: props?.product?.price,
-      quantity: 1,
+      quantity: qty,
     }
 
-    const isProductInCart = cartData.some((cartItem) =>
-      cartItem.CartProducts.some((product) => product.product.id === newItem.productId),
-    )
+    const existingCart = cartData.find((cartItem) => cartItem.userId === user?.id)
+    if (existingCart && existingCart.CartProducts) {
+      const isProductInCart = existingCart.CartProducts.some(
+        (product) =>
+          product.product.id == newItem.productId &&
+          product.colourId == newItem.colourId &&
+          product.sizeId == newItem.sizeId,
+      )
 
-    if (isProductInCart) {
-      toast({
-        title: 'Product Already in Cart',
-        description: 'This product is already in your cart.',
-        status: 'warning',
-        position: 'top-right',
-        duration: 3000,
-        isClosable: true,
-      });
-      return; 
+      if (isProductInCart) {
+        toast.error('Product Already in Cart')
+        return
+      }
     }
+
     try {
-      await createCart(newItem)
-      toast({
-        title: 'Cart Created',
-        description: 'Your cart has been successfully created.',
-        status: 'success',
-        position: 'top-right',
-        duration: 3000,
-        isClosable: true,
-      })
-
-      await fetchCartCount()
+      const res = await createCart(newItem)
+      toast.success(res)
+      setTimeout(() => {
+        fetchCartCount()
+      }, 3000)
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: err?.response?.data?.error || 'An error occurred.',
-        status: 'error',
-        position: 'top-right',
-        duration: 3000,
-        isClosable: true,
-      })
+      toast.error(err)
     }
   }
   //
@@ -143,8 +144,19 @@ export const Body = (props) => {
     }))
   }
 
+  const handleAdd = () => {
+    if (stock) {
+      if (qty < stock) {
+        setQty(qty + 1)
+      }
+    }
+  }
+
+  const handleMin = () => {
+    qty > 1 && setQty(qty - 1)
+  }
   return (
-    <Box p={'1em'} bgColor={'grey.50'} minH={'100vh'}>
+    <Box p={'1em'} bgColor={'grey.50'} minH={'100vh'} maxW={'100vw'}>
       <VStack align={'sretch'}>
         <Box>
           <Text fontWeight={'bold'} fontSize={{ md: '1.5em' }}>
@@ -205,7 +217,6 @@ export const Body = (props) => {
               <VStack align={'stretch'}>
                 <Flex justifyContent={'space-between'} alignItems={'center'} fontSize={'.9em'}>
                   <Text fontWeight={'bold'}>Size</Text>
-                  <Text color={'redPure.500'}>View Size Chart</Text>
                 </Flex>
                 <HStack>
                   {sizes?.map((size, index) => {
@@ -235,9 +246,23 @@ export const Body = (props) => {
                     border={'2px solid #f2f2f2'}
                     borderRadius={'.5em'}
                   >
-                    <Icon as={MinusIcon} color={'redPure.500'} />
-                    <Text>1</Text>
-                    <Icon as={PlusIcon} color={'redPure.500'} />
+                    <Icon
+                      as={MinusIcon}
+                      color={'redPure.500'}
+                      onClick={() => {
+                        handleMin()
+                      }}
+                      cursor={'pointer'}
+                    />
+                    <Text>{qty}</Text>
+                    <Icon
+                      as={PlusIcon}
+                      color={'redPure.500'}
+                      onClick={() => {
+                        handleAdd()
+                      }}
+                      cursor={'pointer'}
+                    />
                   </Flex>
                   <HStack alignSelf={'flex-end'} fontSize={'.75em'} fontWeight={'bold'}>
                     <Text color={'redPure.500'}>{stock}</Text>

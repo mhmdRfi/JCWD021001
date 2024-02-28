@@ -1,6 +1,7 @@
 import React from 'react'
-import { Box, Text, Button, Collapse } from '@chakra-ui/react'
+import { Box, Text, Button, Collapse, Image } from '@chakra-ui/react'
 import toRupiah from '@develoka/angka-rupiah-js'
+import { IMAGE_API_ROUTE } from '../../../services/route'
 
 const WaitingPayment = ({
   waitingPaymentOrders,
@@ -76,15 +77,19 @@ const WaitingPayment = ({
                     w={'112px'}
                     h={'112px'}
                     cursor={'pointer'}
-                    onClick={() => navigate('/order-details')}
-                  ></Box>
+                    onClick={() => navigate('/order-details', { state: { orderId: order?.id } })}
+                  >
+                    <Image
+                      src={`${IMAGE_API_ROUTE}/productImages/${order?.OrderProducts[0]?.stocks?.product?.picture[0]?.imageUrl}`}
+                    />
+                  </Box>
                   <Box display={'flex'} flexDirection={'column'} gap={'6px'}>
                     <Text
                       fontFamily={'body'}
                       fontWeight={'600'}
                       fontSize={'14px'}
                       cursor={'pointer'}
-                      onClick={() => navigate('/order-details')}
+                      onClick={() => navigate('/order-details', { state: { orderId: order?.id } })}
                     >
                       {order?.OrderProducts[0]?.stocks?.product?.name}
                     </Text>
@@ -128,7 +133,11 @@ const WaitingPayment = ({
                   <Box display={'flex'} flexDirection={'column'} gap={'16px'}>
                     {order?.OrderProducts?.slice(1).map((product, index) => (
                       <Box display={'flex'} gap={'16px'} key={index}>
-                        <Box bgColor={'brand.grey100'} w={'112px'} h={'112px'}></Box>
+                        <Box bgColor={'brand.grey100'} w={'112px'} h={'112px'}>
+                          <Image
+                            src={`${IMAGE_API_ROUTE}/productImages/${product?.stocks?.product?.picture[0]?.imageUrl}`}
+                          />
+                        </Box>
                         <Box display={'flex'} flexDirection={'column'} gap={'6px'}>
                           <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
                             {product?.stocks?.product?.name}
@@ -166,7 +175,7 @@ const WaitingPayment = ({
                   Total Price
                 </Text>
                 <Text fontFamily={'body'} fontWeight={'700'} fontSize={'16px'} color={'#CD0244'}>
-                  {toRupiah(+order?.totalPrice, { floatingPoint: 0 })}
+                  {toRupiah(+order?.totalPrice + +order?.shippingCost, { floatingPoint: 0 })}
                 </Text>
               </Box>
             </Box>

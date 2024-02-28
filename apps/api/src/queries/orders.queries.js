@@ -15,6 +15,7 @@ import OrderStatuses from '../models/orderStatuses.model'
 import WarehouseAddress from '../models/warehouseAddress.model'
 import ProductCategory from '../models/productCategory.model'
 import moment from 'moment'
+import ProductImage from '../models/productImage.model'
 
 export const createOrderQuery = async (
   userId,
@@ -74,7 +75,7 @@ export const findOrderIdQuery = async ({ orderId, userId }) => {
       })
       return res
     } else if (userId) {
-      const res = await Orders.findOne({
+      const res = await Orders.findAll({
         where: { userId: userId },
       })
       return res
@@ -86,7 +87,10 @@ export const findOrderIdQuery = async ({ orderId, userId }) => {
 
 export const findOrderStatusQuery = async (orderStatusId) => {
   try {
-    const res = Orders.findAll({ where: { orderStatusId: orderStatusId } })
+    const res = Orders.findAll({
+      include: [{ model: Payments }],
+      where: { orderStatusId: orderStatusId },
+    })
     return res
   } catch (err) {
     throw err
@@ -122,6 +126,10 @@ export const getOrderQuery = async ({
 }) => {
   try {
     const whereClause = {}
+
+    if (userId) {
+      whereClause.userId = userId
+    }
 
     if (orderNumber) {
       whereClause.orderNumber = orderNumber
@@ -161,7 +169,11 @@ export const getOrderQuery = async ({
               model: Stock,
               as: 'stocks',
               include: [
-                { model: Product, as: 'product' },
+                {
+                  model: Product,
+                  as: 'product',
+                  include: [{ model: ProductImage, as: 'picture' }],
+                },
                 { model: Size, as: 'size' },
                 { model: Colour, as: 'colour' },
               ],
@@ -169,7 +181,7 @@ export const getOrderQuery = async ({
           ],
         },
       ],
-      where: Object.keys(whereClause).length > 0 ? whereClause : { userId: userId },
+      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       limit: limit,
       offset: offset,
       order: [['orderDate', 'DESC']],
@@ -194,6 +206,7 @@ export const getOrderQuery = async ({
 }
 
 export const getOrderManagementQuery = async ({
+  adminWarehouse,
   orderNumber,
   orderDate,
   warehouseId,
@@ -203,6 +216,10 @@ export const getOrderManagementQuery = async ({
 }) => {
   try {
     const whereClause = {}
+
+    if (adminWarehouse) {
+      whereClause.warehouseId = adminWarehouse
+    }
 
     if (orderNumber) {
       whereClause.orderNumber = orderNumber
@@ -247,7 +264,11 @@ export const getOrderManagementQuery = async ({
               model: Stock,
               as: 'stocks',
               include: [
-                { model: Product, as: 'product' },
+                {
+                  model: Product,
+                  as: 'product',
+                  include: [{ model: ProductImage, as: 'picture' }],
+                },
                 { model: Size, as: 'size' },
                 { model: Colour, as: 'colour' },
               ],
@@ -274,6 +295,42 @@ export const getOrderManagementQuery = async ({
       },
       offset: offset,
     }
+  } catch (err) {
+    throw err
+  }
+}
+
+export const getOrderDetailQuery = async (orderId) => {
+  try {
+    const orders = await Orders.findOne({
+      include: [
+        { model: User },
+        { model: UserAddress },
+        { model: Warehouse, as: 'warehouse' },
+        { model: Payments },
+        { model: OrderStatuses },
+        {
+          model: OrderProducts,
+          include: [
+            {
+              model: Stock,
+              as: 'stocks',
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  include: [{ model: ProductImage, as: 'picture' }],
+                },
+                { model: Size, as: 'size' },
+                { model: Colour, as: 'colour' },
+              ],
+            },
+          ],
+        },
+      ],
+      where: { id: orderId },
+    })
+    return orders
   } catch (err) {
     throw err
   }
@@ -376,83 +433,27 @@ export const getAllOrderQuery = async (
   orderBy = 'DESC',
   page = 1,
   pageSize = 10,
-  warehouseId = null,
+  warehouseId = 0,
   startDate = null,
   endDate = null,
 ) => {
   try {
     const offset = (page - 1) * pageSize
-    let filteredAttributes = [
-      'id',
-      'warehouseId',
-      'totalPrice',
-      'totalQuantity',
-      'orderDate',
-      'orderStatusId',
-      [
-        Sequelize.literal(
-          `(SELECT SUM(totalPrice) FROM Orders WHERE orderDate BETWEEN '${startDate}' AND '${endDate}')`,
-        ),
-        'totalPriceSum',
-      ],
-    ]
-    const filter = {}
-    filter.where = {
-      warehouseId: {
-        [Op.eq]: warehouseId,
-      },
-      orderDate: {
-        [Op.lte]: new Date(endDate),
-        [Op.gte]: new Date(startDate),
-      },
+    let query = `SELECT 
+      SUM(totalPrice) AS TotalSales,
+      SUM(totalQuantity) AS TotalQuantity
+      FROM 
+      orders
+      WHERE 
+      orderDate >= '${startDate}' AND orderDate <= '${endDate}' AND orders.orderStatusId NOT IN (1, 6)`
+
+    if (warehouseId != 0) {
+      query += ` AND warehouseId = ${warehouseId}`
     }
 
-    const res = await Orders.findAll({
-      attributes: filteredAttributes,
-      include: [
-        {
-          model: Warehouse,
-          attributes: ['name'],
-          as: 'warehouse',
-          include: [{ model: WarehouseAddress, attributes: ['location'] }],
-        },
-        {
-          model: OrderProducts,
-          attributes: ['price', 'quantity'],
-          include: [
-            {
-              model: Stock,
-              as: 'stocks',
-              attributes: ['productId'],
-              include: [
-                {
-                  model: Product,
-                  as: 'product',
-                  attributes: ['name', 'price', 'productCategoryId'],
-                  include: [
-                    {
-                      model: ProductCategory,
-                      as: 'category',
-                      include: [
-                        {
-                          model: ProductCategory,
-                          as: 'parent',
-                          include: [{ model: ProductCategory, as: 'parent' }],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      ...filter,
-      order: [[`${sortBy}`, `${orderBy}`]],
-      limit: +pageSize,
-      offset: offset,
-    })
+    query += ` LIMIT ${pageSize} OFFSET ${offset};`
+
+    const res = await Orders.sequelize.query(query)
     return res
   } catch (err) {
     throw err
@@ -461,10 +462,13 @@ export const getAllOrderQuery = async (
 
 export const getAllOrderByCategoryQuery = async (warehouseId, startDate, endDate) => {
   try {
-    const res = await OrderProducts.sequelize
-      .query(`SELECT  grandparent_category.name as grandparent_name, parent_category.name AS group_name, parent_category.id as group_id,  
+    let query = `SELECT 
+      grandparent_category.name as grandparent_name,
+      parent_category.name AS group_name,
+      parent_category.id as group_id,
+      child_category.name as child,
       SUM(orderProducts.quantity) as ordercount,
-      SUM(orderProducts.price * orderProducts.quantity) AS total
+      SUM(orderProducts.price) AS total
       FROM orders
       JOIN orderProducts ON orders.id = orderProducts.orderId
       JOIN stocks ON orderProducts.stockId = stocks.id
@@ -472,9 +476,16 @@ export const getAllOrderByCategoryQuery = async (warehouseId, startDate, endDate
       JOIN productCategories AS child_category ON products.productCategoryId = child_category.id
       JOIN productCategories AS parent_category ON child_category.parentId = parent_category.id
       JOIN productCategories AS grandparent_category ON parent_category.parentId = grandparent_category.id
-      WHERE orders.orderDate >= '${startDate}' AND orders.orderDate <= '${endDate}'
-      AND orders.warehouseId = ${warehouseId}
-      GROUP BY parent_category.id;`)
+      WHERE orders.orderDate >= '${startDate}' AND orders.orderDate <= '${endDate}' AND orders.orderStatusId NOT IN (1, 6)`
+
+    if (warehouseId != 0) {
+      query += ` AND orders.warehouseId = ${warehouseId}`
+    }
+
+    query += ` GROUP BY child_category.id
+      ORDER BY child, ordercount;`
+
+    const res = await OrderProducts.sequelize.query(query)
     return res
   } catch (err) {
     throw err
@@ -490,19 +501,35 @@ export const getAllOrderByProductQuery = async (
 ) => {
   try {
     const offset = (page - 1) * pageSize
-    const res = await OrderProducts.sequelize.query(`SELECT p.id, p.name, 
-  SUM(op.price) as total, 
-  SUM(op.quantity) as sold
-FROM orders as o
-JOIN orderProducts as op ON o.id = op.orderId
-JOIN stocks as st ON op.stockId = st.id
-JOIN products as p ON st.productId = p.id
-WHERE o.orderDate >= '${startDate}' 
-  AND o.orderDate <= '${endDate}' 
-  AND o.warehouseId = ${Number(warehouseId)}
-GROUP BY p.id
-LIMIT ${pageSize} OFFSET ${offset};
-`)
+
+    let query = `SELECT 
+      p.id, 
+      p.name, 
+      grandparent_category.name as grandparent_name,
+      SUM(op.price) as total, 
+      SUM(op.quantity) as sold
+    FROM 
+      orders as o
+      JOIN orderProducts as op ON o.id = op.orderId
+      JOIN stocks as st ON op.stockId = st.id
+      JOIN products as p ON st.productId = p.id
+      JOIN productCategories AS child_category ON p.productCategoryId = child_category.id
+      JOIN productCategories AS parent_category ON child_category.parentId = parent_category.id
+      JOIN productCategories AS grandparent_category ON parent_category.parentId = grandparent_category.id
+    WHERE 
+      o.orderDate >= '${startDate}' 
+      AND o.orderDate <= '${endDate}' 
+      AND o.orderStatusId NOT IN (1, 6)`
+
+    if (warehouseId != 0) {
+      query += ` AND o.warehouseId = ${Number(warehouseId)}`
+    }
+
+    query += ` GROUP BY p.id
+      ORDER BY sold
+      LIMIT ${pageSize} OFFSET ${offset};`
+
+    const res = await OrderProducts.sequelize.query(query)
     return res
   } catch (err) {
     throw err

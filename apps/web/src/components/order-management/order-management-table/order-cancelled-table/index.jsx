@@ -11,9 +11,12 @@ import {
   Tr,
   Td,
   TableContainer,
+  Image,
 } from '@chakra-ui/react'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import toRupiah from '@develoka/angka-rupiah-js'
+import { useNavigate } from 'react-router-dom'
+import { IMAGE_API_ROUTE } from '../../../../services/route'
 
 const OrderCancelledTable = ({
   orderData,
@@ -21,7 +24,9 @@ const OrderCancelledTable = ({
   handleToggleProducts,
   handleAcceptButton,
   handleRejectButton,
+  formatDate,
 }) => {
+  const navigate = useNavigate()
   return (
     <Box>
       <TableContainer display={{ base: 'none', xl: 'block' }} borderRadius={'8px'}>
@@ -40,12 +45,7 @@ const OrderCancelledTable = ({
               </Td>
               <Td>
                 <Text fontFamily={'body'} fontWeight={'700'} fontSize={'14px'} color={'white'}>
-                  Order Number
-                </Text>
-              </Td>
-              <Td>
-                <Text fontFamily={'body'} fontWeight={'700'} fontSize={'14px'} color={'white'}>
-                  Customer’s Name
+                  No. Order & Name
                 </Text>
               </Td>
               <Td>
@@ -56,11 +56,6 @@ const OrderCancelledTable = ({
               <Td>
                 <Text fontFamily={'body'} fontWeight={'700'} fontSize={'14px'} color={'white'}>
                   Gross Amount
-                </Text>
-              </Td>
-              <Td>
-                <Text fontFamily={'body'} fontWeight={'700'} fontSize={'14px'} color={'white'}>
-                  Status Payment
                 </Text>
               </Td>
               <Td>
@@ -77,25 +72,35 @@ const OrderCancelledTable = ({
                 bg={index % 2 === 0 ? '#FFF1F5' : 'white'}
                 // _hover={{ bg: '#FED7E2' }}
               >
-                <Td cursor={'pointer'} onClick={() => navigate('/order-management/details')}>
+                <Td>
                   <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
-                    {items?.orderDate}
+                    {formatDate(items?.orderDate)}
                   </Text>
                 </Td>
-                <Td cursor={'pointer'} onClick={() => navigate('/order-management/details')}>
+                <Td>
                   <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
                     {items?.warehouse?.id}
                   </Text>
                 </Td>
-                <Td cursor={'pointer'} onClick={() => navigate('/order-management/details')}>
-                  <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
-                    {items?.orderNumber}
-                  </Text>
-                </Td>
-                <Td cursor={'pointer'} onClick={() => navigate('/order-management/details')}>
-                  <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
-                    {items?.User?.username}
-                  </Text>
+                <Td>
+                  <Box display={'flex'} flexDirection={'column'} gap={'12px'}>
+                    <Text
+                      fontFamily={'body'}
+                      fontWeight={'600'}
+                      fontSize={'14px'}
+                      cursor={'pointer'}
+                      onClick={() =>
+                        navigate('/dashboard/order-management/details', {
+                          state: { orderId: items?.id },
+                        })
+                      }
+                    >
+                      {items?.orderNumber}
+                    </Text>
+                    <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
+                      {items?.User?.username}
+                    </Text>
+                  </Box>
                 </Td>
                 <Td>
                   <Box display={'flex'} flexDirection={'column'} gap={'8px'}>
@@ -105,9 +110,24 @@ const OrderCancelledTable = ({
                         h={'66px'}
                         bgColor={'#D9D9D9'}
                         cursor={'pointer'}
-                        onClick={() => navigate('/order-management/details')}
-                      />
-                      <Box cursor={'pointer'} onClick={() => navigate('/order-management/details')}>
+                        onClick={() =>
+                          navigate('/dashboard/order-management/details', {
+                            state: { orderId: items?.id },
+                          })
+                        }
+                      >
+                        <Image
+                          src={`${IMAGE_API_ROUTE}/productImages/${items?.OrderProducts[0]?.stocks?.product?.picture[0]?.imageUrl}`}
+                        />
+                      </Box>
+                      <Box
+                        cursor={'pointer'}
+                        onClick={() =>
+                          navigate('/dashboard/order-management/details', {
+                            state: { orderId: items?.id },
+                          })
+                        }
+                      >
                         <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
                           {items?.OrderProducts[0]?.stocks?.product?.name}
                         </Text>
@@ -126,7 +146,11 @@ const OrderCancelledTable = ({
                     <Collapse in={expandedProducts[items.id]}>
                       {items?.OrderProducts.slice(1).map((product, index) => (
                         <Box display={'flex'} gap={'8px'} key={index}>
-                          <Box w={'66px'} h={'66px'} bgColor={'#D9D9D9'} />
+                          <Box w={'66px'} h={'66px'} bgColor={'#D9D9D9'}>
+                            <Image
+                              src={`${IMAGE_API_ROUTE}/productImages/${product?.stocks?.product?.picture[0]?.imageUrl}`}
+                            />
+                          </Box>
                           <Box>
                             <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
                               {product?.stocks?.product?.name}
@@ -178,14 +202,14 @@ const OrderCancelledTable = ({
                   </Box>
                 </Td>
                 <Td>
-                  <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
-                    {toRupiah(+items?.Payment?.grossAmount, { floatingPoint: 0 })}
-                  </Text>
-                </Td>
-                <Td>
-                  <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
-                    {items?.Payment?.paymentStatus}
-                  </Text>
+                  <Box display={'flex'} flexDirection={'column'} gap={'8px'}>
+                    <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
+                      {`${toRupiah(+items?.Payment?.grossAmount, { floatingPoint: 0 })}`}
+                    </Text>
+                    <Text fontFamily={'body'} fontWeight={'600'} fontSize={'14px'}>
+                      {`(${items?.Payment?.paymentStatus})`}
+                    </Text>
+                  </Box>
                 </Td>
                 <Td>
                   <Box display={'flex'} gap={'8px'}>
@@ -193,7 +217,11 @@ const OrderCancelledTable = ({
                       size={'sm'}
                       border={'1px solid #CD0244'}
                       color={'#CD0244'}
-                      onClick={() => handleRejectButton(items?.id)}
+                      onClick={() =>
+                        navigate('/dashboard/order-management/details', {
+                          state: { orderId: items?.id },
+                        })
+                      }
                     >
                       See Details
                     </Button>

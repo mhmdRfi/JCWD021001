@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Text, Button, ButtonGroup, Icon, Input, Collapse } from '@chakra-ui/react'
-import { Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react'
+import React from 'react'
+import { Box, Text } from '@chakra-ui/react'
+import { Tabs, TabPanels, TabPanel } from '@chakra-ui/react'
 import { Select } from '@chakra-ui/react'
 import NewOrderTable from './order-management-table/new-orders-table'
 import CustomTabList from './custom-tablist'
@@ -22,6 +22,7 @@ import OrderCancelled from './order-card/order-cancelled'
 import ModalCheck from './modal-check'
 
 const OrderManagementBody = ({
+  user,
   orderData,
   warehouseData,
   onOrderNumberSubmit,
@@ -56,16 +57,16 @@ const OrderManagementBody = ({
     handleTabChange,
     activeTab,
     handleTabClick,
+    formatDate,
   } = useOrderManagementState({
     orderData,
     onOrderNumberSubmit,
     onOrderDateSubmit,
     onWarehouseSubmit,
-    onTabClick
+    onTabClick,
   })
   return (
     <Box display={'flex'}>
-      {/* <Box w={{ base: 'none', xl: '15vw' }} minH={'100vh'} bgColor={'white'}></Box> */}
       <Box w={'100%'} minH={'100vh'} padding={'24px'}>
         <Box display={'flex'} flexDirection={'column'} gap={'16px'}>
           <Box display={'flex'} alignItems={'center'} justifyContent={'space-between'}>
@@ -79,6 +80,39 @@ const OrderManagementBody = ({
                 handleOrderNumberKeyPress={handleOrderNumberKeyPress}
                 handleOrderNumberSubmit={handleOrderNumberSubmit}
               />
+              {user.roleId !== 2 && (
+                <Box
+                  bgColor={'white'}
+                  w={'250px'}
+                  padding={'4px 12px 4px 8px'}
+                  borderRadius={'8px'}
+                >
+                  <Select
+                    placeholder="Warehouse Name"
+                    border={'none'}
+                    value={selectedWarehouse}
+                    onChange={handleSelectWarehouseChange}
+                  >
+                    {warehouseData.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Box>
+              )}
+              <DateFilter orderDate={orderDate} handleOrderDateChange={handleOrderDateChange} />
+            </Box>
+          </Box>
+          <BreadcrumbNav />
+          <Box display={{ base: 'flex', xl: 'none' }} alignItems={'center'} gap={'16px'}>
+            <Search
+              orderNumber={orderNumber}
+              handleOrderNumberChange={handleOrderNumberChange}
+              handleOrderNumberKeyPress={handleOrderNumberKeyPress}
+              handleOrderNumberSubmit={handleOrderNumberSubmit}
+            />
+            {user.roleId !== 2 && (
               <Box bgColor={'white'} w={'250px'} padding={'4px 12px 4px 8px'} borderRadius={'8px'}>
                 <Select
                   placeholder="Warehouse Name"
@@ -93,31 +127,8 @@ const OrderManagementBody = ({
                   ))}
                 </Select>
               </Box>
-              <DateFilter orderDate={orderDate} handleOrderDateChange={handleOrderDateChange} />
-            </Box>
-          </Box>
-          <BreadcrumbNav />
-          <Box display={{ base: 'flex', xl: 'none' }} alignItems={'center'} gap={'16px'}>
-            <Search
-              orderNumber={orderNumber}
-              handleOrderNumberChange={handleOrderNumberChange}
-              handleOrderNumberKeyPress={handleOrderNumberKeyPress}
-              handleOrderNumberSubmit={handleOrderNumberSubmit}
-            />
-            <Box bgColor={'white'} w={'250px'} padding={'4px 12px 4px 8px'} borderRadius={'8px'}>
-              <Select
-                placeholder="Warehouse Name"
-                border={'none'}
-                value={selectedWarehouse}
-                onChange={handleSelectWarehouseChange}
-              >
-                {warehouseData.map((warehouse) => (
-                  <option key={warehouse.id} value={warehouse.id}>
-                    {warehouse.name}
-                  </option>
-                ))}
-              </Select>
-            </Box>
+            )}
+
             <DateFilter orderDate={orderDate} handleOrderDateChange={handleOrderDateChange} />
           </Box>
           <MobileMenu
@@ -140,6 +151,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleRejectButton={handleRejectButton}
                   handleCheckStock={handleCheckStock}
+                  formatDate={formatDate}
                 />
                 <NewOrderTable
                   orderData={orderData}
@@ -147,6 +159,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleRejectButton={handleRejectButton}
                   handleCheckStock={handleCheckStock}
+                  formatDate={formatDate}
                 />
                 <Pagination
                   currentPage={pagination?.currentPage}
@@ -162,6 +175,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleSendButton={handleSendButton}
                   handleCanceltOnProcess={handleCanceltOnProcess}
+                  formatDate={formatDate}
                 />
                 <OnProcessTable
                   orderData={orderData}
@@ -169,6 +183,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleSendButton={handleSendButton}
                   handleCanceltOnProcess={handleCanceltOnProcess}
+                  formatDate={formatDate}
                 />
                 <Pagination
                   currentPage={pagination?.currentPage}
@@ -183,6 +198,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleAcceptButton={handleAcceptButton}
                   handleRejectButton={handleRejectButton}
+                  formatDate={formatDate}
                 />
                 <OnDeliveryTable
                   orderData={orderData}
@@ -190,6 +206,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleAcceptButton={handleAcceptButton}
                   handleRejectButton={handleRejectButton}
+                  formatDate={formatDate}
                 />
                 <Pagination
                   currentPage={pagination?.currentPage}
@@ -204,6 +221,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleAcceptButton={handleAcceptButton}
                   handleRejectButton={handleRejectButton}
+                  formatDate={formatDate}
                 />
                 <OrderConfirmedTable
                   orderData={orderData}
@@ -211,6 +229,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleAcceptButton={handleAcceptButton}
                   handleRejectButton={handleRejectButton}
+                  formatDate={formatDate}
                 />
                 <Pagination
                   currentPage={pagination?.currentPage}
@@ -225,6 +244,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleAcceptButton={handleAcceptButton}
                   handleRejectButton={handleRejectButton}
+                  formatDate={formatDate}
                 />
                 <OrderCancelledTable
                   orderData={orderData}
@@ -232,6 +252,7 @@ const OrderManagementBody = ({
                   handleToggleProducts={handleToggleProducts}
                   handleAcceptButton={handleAcceptButton}
                   handleRejectButton={handleRejectButton}
+                  formatDate={formatDate}
                 />
                 <Pagination
                   currentPage={pagination?.currentPage}

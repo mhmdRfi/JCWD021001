@@ -19,7 +19,7 @@ function TableAdmin({admin, onAdminUpdated, setSortFiled, setSortOrder}) {
 
   return (
     <>
-      <TableContainer maxWidth={'1163px'} borderRadius={'8px'} >
+      <TableContainer maxWidth={{base: '100vw', md: '80vw'}} borderRadius={'8px'} >
         <Table size={{base: 'sm', md:'md'}}>
           <Thead bgColor={'#CD0244'}>
             <Tr>
@@ -69,7 +69,6 @@ function TableAdmin({admin, onAdminUpdated, setSortFiled, setSortOrder}) {
               <Tr
                 key={user.id}
                 bg={index % 2 === 0 ? '#FFF1F5' : 'white'}
-                // _hover={{ bg: '#FED7E2' }}
               >
                 <Td>
                 {user?.avatar ? (
