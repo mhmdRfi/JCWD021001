@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import CategoryList from './components/category-list'
-import Navbar from '../../components/Navbar'
+// import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer/Footer'
 import { Box, Flex, Text, Link } from '@chakra-ui/react'
 import 'swiper/css'
@@ -49,7 +49,7 @@ function Home() {
 
   return (
     <Box width={'100vw'} overflow={'hidden'}>
-      <Navbar position="relative" />
+      {/* <Navbar position="relative" /> */}
       <Box className="container-homepage" bg={'brand.grey100'}>
         <Box className="Header" height={'712px'} position={'relative'}>
           <SwiperBox/>
